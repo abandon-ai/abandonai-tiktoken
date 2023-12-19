@@ -41,35 +41,38 @@ func HandleRequest(ctx context.Context, sqsEvent events.SQSEvent) (events.APIGat
 
 		baseRatio := 2.0
 
-		if msgBody.Model == "gpt-4-vision-preview" {
+		switch msgBody.Model {
+		case "gpt-4-vision-preview":
 			promptCost = float64(promptTokens) * 0.01 * baseRatio / 1000
 			completionCost = float64(completionTokens) * 0.03 * baseRatio / 1000
-		} else if msgBody.Model == "gpt-4-1106-preview" {
+		case "gpt-4-1106-preview":
 			promptCost = float64(promptTokens) * 0.01 * baseRatio / 1000
 			completionCost = float64(completionTokens) * 0.03 * baseRatio / 1000
-		} else if msgBody.Model == "gpt-4-0314" {
+		case "gpt-4-0314":
 			promptCost = float64(promptTokens) * 0.03 * baseRatio / 1000
 			completionCost = float64(completionTokens) * 0.06 * baseRatio / 1000
-		} else if msgBody.Model == "gpt-4" {
+		case "gpt-4":
 			promptCost = float64(promptTokens) * 0.03 * baseRatio / 1000
 			completionCost = float64(completionTokens) * 0.06 * baseRatio / 1000
-		} else if msgBody.Model == "gpt-3.5-turbo-0301" {
+		case "gpt-3.5-turbo-0301":
 			promptCost = float64(promptTokens) * 0.0016 * baseRatio / 1000
 			completionCost = float64(completionTokens) * 0.002 * baseRatio / 1000
-		} else if msgBody.Model == "gpt-3.5-turbo" {
+		case "gpt-3.5-turbo":
 			promptCost = float64(promptTokens) * 0.0016 * baseRatio / 1000
 			completionCost = float64(completionTokens) * 0.002 * baseRatio / 1000
-		} else if msgBody.Model == "gpt-3.5-turbo-16k" {
+		case "gpt-3.5-turbo-16k":
 			promptCost = float64(promptTokens) * 0.003 * baseRatio / 1000
 			completionCost = float64(completionTokens) * 0.004 * baseRatio / 1000
-		} else if msgBody.Model == "gpt-3.5-turbo-1106" {
+		case "gpt-3.5-turbo-1106":
 			promptCost = float64(promptTokens) * 0.001 * baseRatio / 1000
 			completionCost = float64(completionTokens) * 0.002 * baseRatio / 1000
+		default:
+			fmt.Println("Model not supported")
 		}
 
 		totalCost = promptCost + completionCost
 
-		fmt.Println("User: " + msgBody.User)
+		fmt.Println("user: " + msgBody.User)
 		fmt.Printf("totalTokens: %d\n", promptTokens+completionTokens)
 		fmt.Printf("totalCost: %f\n", totalCost)
 	}
