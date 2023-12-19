@@ -32,12 +32,46 @@ func HandleRequest(ctx context.Context, sqsEvent events.SQSEvent) (events.APIGat
 			continue
 		}
 
-		promptTokens := tke.Encode(msgBody.Prompt, nil, nil)
-		completionTokens := tke.Encode(msgBody.Completion, nil, nil)
+		promptTokens := len(tke.Encode(msgBody.Prompt, nil, nil))
+		completionTokens := len(tke.Encode(msgBody.Completion, nil, nil))
 
-		fmt.Println("prompt_tokens:", len(promptTokens))
-		fmt.Println("completion_tokens:", len(completionTokens))
-		fmt.Println("total_tokens:", len(promptTokens)+len(completionTokens))
+		promptCost := 0.0
+		completionCost := 0.0
+		totalCost := 0.0
+
+		baseRatio := 2.0
+
+		if msgBody.Model == "gpt-4-vision-preview" {
+			promptCost = float64(promptTokens) * 0.01 * baseRatio / 1000
+			completionCost = float64(completionTokens) * 0.03 * baseRatio / 1000
+		} else if msgBody.Model == "gpt-4-1106-preview" {
+			promptCost = float64(promptTokens) * 0.01 * baseRatio / 1000
+			completionCost = float64(completionTokens) * 0.03 * baseRatio / 1000
+		} else if msgBody.Model == "gpt-4-0314" {
+			promptCost = float64(promptTokens) * 0.03 * baseRatio / 1000
+			completionCost = float64(completionTokens) * 0.06 * baseRatio / 1000
+		} else if msgBody.Model == "gpt-4" {
+			promptCost = float64(promptTokens) * 0.03 * baseRatio / 1000
+			completionCost = float64(completionTokens) * 0.06 * baseRatio / 1000
+		} else if msgBody.Model == "gpt-3.5-turbo-0301" {
+			promptCost = float64(promptTokens) * 0.0016 * baseRatio / 1000
+			completionCost = float64(completionTokens) * 0.002 * baseRatio / 1000
+		} else if msgBody.Model == "gpt-3.5-turbo" {
+			promptCost = float64(promptTokens) * 0.0016 * baseRatio / 1000
+			completionCost = float64(completionTokens) * 0.002 * baseRatio / 1000
+		} else if msgBody.Model == "gpt-3.5-turbo-16k" {
+			promptCost = float64(promptTokens) * 0.003 * baseRatio / 1000
+			completionCost = float64(completionTokens) * 0.004 * baseRatio / 1000
+		} else if msgBody.Model == "gpt-3.5-turbo-1106" {
+			promptCost = float64(promptTokens) * 0.001 * baseRatio / 1000
+			completionCost = float64(completionTokens) * 0.002 * baseRatio / 1000
+		}
+
+		totalCost = promptCost + completionCost
+
+		fmt.Println("User: " + msgBody.User)
+		fmt.Printf("totalTokens: %d\n", promptTokens+completionTokens)
+		fmt.Printf("totalCost: %f\n", totalCost)
 	}
 
 	// Return a successful response
