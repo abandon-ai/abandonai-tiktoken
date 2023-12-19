@@ -1,0 +1,6 @@
+/.serverless/
+/bin/
+/.idea/
+package-lock.json
+/node_modules/
+.env.*

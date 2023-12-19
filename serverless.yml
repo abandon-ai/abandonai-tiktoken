@@ -1,0 +1,22 @@
+service: abandonai-billing
+provider:
+  name: aws
+  runtime: go1.x
+  region: ap-northeast-1
+
+plugins:
+  - serverless-dotenv-plugin
+
+useDotenv: true
+
+package:
+  patterns:
+    - "!./**"
+    - "./bin/**"
+functions:
+  charges_create:
+    handler: bin/cmd/charges_create
+    events:
+      - sqs:
+          arn: ${env:AI_CHARGES_CREATE_SQS_FIFO_ARN}
+          batchSize: 10

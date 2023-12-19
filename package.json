@@ -1,0 +1,20 @@
+{
+  "name": "abandonai-billing",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "clean": "rm -rf ./bin",
+    "build": "find ./cmd -type f -name 'main.go' -exec dirname {} \\; | xargs -I {} env GOOS=linux GOARCH=amd64 go build -o \"bin/{}\" {}"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "serverless": "^3.38.0"
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.3",
+    "env-cmd": "^10.1.0",
+    "serverless-dotenv-plugin": "^6.0.0"
+  }
+}
