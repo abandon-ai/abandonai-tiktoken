@@ -1,4 +1,4 @@
-service: abandonai-billing
+service: abandonai-tiktoken
 provider:
   name: aws
   runtime: go1.x
@@ -14,9 +14,9 @@ package:
     - "!./**"
     - "./bin/**"
 functions:
-  charges_create:
-    handler: bin/cmd/charges_create
+  tiktoken:
+    handler: bin/cmd/tiktoken
     events:
-      - sqs:
-          arn: ${env:AI_CHARGES_CREATE_SQS_FIFO_ARN}
-          batchSize: 10
+      - http:
+          path: /tiktoken
+          method: POST

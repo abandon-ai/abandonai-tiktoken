@@ -1,4 +1,4 @@
-module github.com/tunogya/abandonai-billing
+module github.com/tunogya/abandonai-tiktoken
 
 go 1.21.5
 
