@@ -11,72 +11,85 @@ import (
 	"strconv"
 )
 
+const (
+	defaultBaseRatio = 1.0
+)
+
+var (
+	baseRatio float64
+)
+
+func init() {
+	// Load the base ratio once during the initialization of the Lambda.
+	envBaseRatio := os.Getenv("BASE_RATIO")
+	if envBaseRatio == "" {
+		baseRatio = defaultBaseRatio
+	} else {
+		var err error
+		baseRatio, err = strconv.ParseFloat(envBaseRatio, 64)
+		if err != nil {
+			fmt.Printf("Error parsing BASE_RATIO: %v, using default value.\n", err)
+			baseRatio = defaultBaseRatio
+		}
+	}
+}
+
 type MsgBody struct {
 	Prompt     string `json:"prompt"`
 	Completion string `json:"completion"`
 	Model      string `json:"model"`
 }
 
-func HandleRequest(ctx context.Context, event events.APIGatewayProxyResponse) (events.APIGatewayProxyResponse, error) {
+func calculateCost(model string, promptTokens, completionTokens int) (promptCost, completionCost float64) {
+	costPerThousandTokens := map[string]struct {
+		promptMultiplier     float64
+		completionMultiplier float64
+	}{
+		"gpt-4-vision-preview": {0.01, 0.03},
+		"gpt-4-1106-preview":   {0.01, 0.03},
+		"gpt-4-0314":           {0.03, 0.06},
+		"gpt-4":                {0.03, 0.06},
+		"gpt-3.5-turbo-0301":   {0.0016, 0.002},
+		"gpt-3.5-turbo":        {0.0016, 0.002},
+		"gpt-3.5-turbo-16k":    {0.003, 0.004},
+		"gpt-3.5-turbo-1106":   {0.001, 0.002},
+	}
+
+	if multipliers, ok := costPerThousandTokens[model]; ok {
+		promptCost = float64(promptTokens) * multipliers.promptMultiplier * baseRatio / 1000
+		completionCost = float64(completionTokens) * multipliers.completionMultiplier * baseRatio / 1000
+	} else {
+		fmt.Println("Model not supported")
+	}
+
+	return promptCost, completionCost
+}
+
+func HandleRequest(ctx context.Context, event events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	var msgBody MsgBody
 	err := json.Unmarshal([]byte(event.Body), &msgBody)
 	if err != nil {
-		fmt.Printf("Error unmarshaling message: %v\n", err)
+		return events.APIGatewayProxyResponse{
+			Body:       fmt.Sprintf(`{"error": "Error unmarshaling message: %v"}`, err),
+			StatusCode: 400,
+		}, nil
 	}
 
 	tke, err := tiktoken.EncodingForModel(msgBody.Model)
 	if err != nil {
-		fmt.Printf("getEncoding: %v\n", err)
+		return events.APIGatewayProxyResponse{
+			Body:       fmt.Sprintf(`{"error": "getEncoding: %v"}`, err),
+			StatusCode: 400,
+		}, nil
 	}
 
 	promptTokens := len(tke.Encode(msgBody.Prompt, nil, nil))
 	completionTokens := len(tke.Encode(msgBody.Completion, nil, nil))
 
-	promptCost := 0.0
-	completionCost := 0.0
-	totalCost := 0.0
+	promptCost, completionCost := calculateCost(msgBody.Model, promptTokens, completionTokens)
+	totalCost := promptCost + completionCost
 
-	envBaseRatio := os.Getenv("BASE_RATIO")
-	if envBaseRatio == "" {
-		envBaseRatio = "1.0"
-	}
-	baseRatio, err := strconv.ParseFloat(envBaseRatio, 64)
-	if err != nil {
-		baseRatio = 1.0
-	}
-
-	switch msgBody.Model {
-	case "gpt-4-vision-preview":
-		promptCost = float64(promptTokens) * 0.01 * baseRatio / 1000
-		completionCost = float64(completionTokens) * 0.03 * baseRatio / 1000
-	case "gpt-4-1106-preview":
-		promptCost = float64(promptTokens) * 0.01 * baseRatio / 1000
-		completionCost = float64(completionTokens) * 0.03 * baseRatio / 1000
-	case "gpt-4-0314":
-		promptCost = float64(promptTokens) * 0.03 * baseRatio / 1000
-		completionCost = float64(completionTokens) * 0.06 * baseRatio / 1000
-	case "gpt-4":
-		promptCost = float64(promptTokens) * 0.03 * baseRatio / 1000
-		completionCost = float64(completionTokens) * 0.06 * baseRatio / 1000
-	case "gpt-3.5-turbo-0301":
-		promptCost = float64(promptTokens) * 0.0016 * baseRatio / 1000
-		completionCost = float64(completionTokens) * 0.002 * baseRatio / 1000
-	case "gpt-3.5-turbo":
-		promptCost = float64(promptTokens) * 0.0016 * baseRatio / 1000
-		completionCost = float64(completionTokens) * 0.002 * baseRatio / 1000
-	case "gpt-3.5-turbo-16k":
-		promptCost = float64(promptTokens) * 0.003 * baseRatio / 1000
-		completionCost = float64(completionTokens) * 0.004 * baseRatio / 1000
-	case "gpt-3.5-turbo-1106":
-		promptCost = float64(promptTokens) * 0.001 * baseRatio / 1000
-		completionCost = float64(completionTokens) * 0.002 * baseRatio / 1000
-	default:
-		fmt.Println("Model not supported")
-	}
-
-	totalCost = promptCost + completionCost
-
-	return events.APIGatewayProxyResponse{Body: fmt.Sprintf(`{
+	responseBody := fmt.Sprintf(`{
 		"usage": {
 			"prompt_tokens": %d,
 			"completion_tokens": %d,
@@ -87,7 +100,9 @@ func HandleRequest(ctx context.Context, event events.APIGatewayProxyResponse) (e
 			"completion_cost": %f,
 			"total_cost": %f
 		}
-	}`, promptTokens, completionTokens, promptTokens+completionTokens, promptCost, completionCost, totalCost), StatusCode: 200}, nil
+	}`, promptTokens, completionTokens, promptTokens+completionTokens, promptCost, completionCost, totalCost)
+
+	return events.APIGatewayProxyResponse{Body: responseBody, StatusCode: 200}, nil
 }
 
 func main() {
