@@ -57,13 +57,16 @@ func calculateCost(model string, promptTokens, completionTokens int) (promptCost
 	}
 
 	if _1kPrice, ok := costPerThousandTokens[model]; ok {
-		promptCost = float64(promptTokens) * _1kPrice.in * baseRatio / 1000
-		completionCost = float64(completionTokens) * _1kPrice.out * baseRatio / 1000
+		promptCostStr := fmt.Sprintf("%.9f", float64(promptTokens)*_1kPrice.in*baseRatio/1000)
+		completionCostStr := fmt.Sprintf("%.9f", float64(completionTokens)*_1kPrice.out*baseRatio/1000)
+
+		promptCost, _ := strconv.ParseFloat(promptCostStr, 64)
+		completionCost, _ := strconv.ParseFloat(completionCostStr, 64)
+		return promptCost, completionCost
 	} else {
 		fmt.Println("Model not supported")
+		return 0.0, 0.0
 	}
-
-	return promptCost, completionCost
 }
 
 func HandleRequest(ctx context.Context, event events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
