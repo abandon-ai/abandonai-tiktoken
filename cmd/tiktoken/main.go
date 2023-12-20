@@ -67,11 +67,18 @@ func HandleRequest(ctx context.Context, event events.APIGatewayProxyResponse) (e
 
 	totalCost = promptCost + completionCost
 
-	fmt.Printf("totalTokens: %d\n", promptTokens+completionTokens)
-	fmt.Printf("totalCost: %f\n", totalCost)
-
-	// Return a successful response
-	return events.APIGatewayProxyResponse{Body: "OK", StatusCode: 200}, nil
+	return events.APIGatewayProxyResponse{Body: fmt.Sprintf(`{
+		"usage": {
+			"prompt_tokens": %d,
+			"completion_tokens": %d,
+			"total_tokens": %d
+		},
+		"cost": {
+			"prompt_cost": %f,
+			"completion_cost": %f,
+			"total_cost": %f
+		}
+	}`, promptTokens, completionTokens, promptTokens+completionTokens, promptCost, completionCost, totalCost), StatusCode: 200}, nil
 }
 
 func main() {
