@@ -15,8 +15,9 @@ package:
     - "./bin/**"
 functions:
   tiktoken:
+    name: abandonai-tiktoken
     handler: bin/cmd/tiktoken
     events:
-      - http:
-          path: /
+      - httpApi:
+          path: /tiktoken
           method: POST
