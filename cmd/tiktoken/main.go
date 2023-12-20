@@ -107,22 +107,38 @@ func HandleRequest(ctx context.Context, event events.APIGatewayProxyRequest) (ev
 	wg.Wait()
 
 	promptCost, completionCost := calculateCost(msgBody.Model, promptTokens, completionTokens)
-	totalCost := promptCost + completionCost
 
-	responseBody := fmt.Sprintf(`{
-		"usage": {
-			"prompt_tokens": %d,
-			"completion_tokens": %d,
-			"total_tokens": %d
+	responseData := map[string]interface{}{
+		"usage": map[string]int{
+			"prompt_tokens":     promptTokens,
+			"completion_tokens": completionTokens,
+			"total_tokens":      promptTokens + completionTokens,
 		},
-		"cost": {
-			"prompt_cost": %f,
-			"completion_cost": %f,
-			"total_cost": %f
-		}
-	}`, promptTokens, completionTokens, promptTokens+completionTokens, promptCost, completionCost, totalCost)
+		"cost": map[string]float64{
+			"prompt_cost":     promptCost,
+			"completion_cost": completionCost,
+			"total_cost":      promptCost + completionCost,
+		},
+	}
 
-	return events.APIGatewayProxyResponse{Body: responseBody, StatusCode: 200}, nil
+	jsonBytes, err := json.Marshal(responseData)
+	if err != nil {
+		fmt.Println("Error marshalling JSON:", err)
+		return events.APIGatewayProxyResponse{
+			Body:       `{"error": "Error marshalling JSON"}`,
+			StatusCode: 500,
+		}, nil
+	}
+
+	responseBody := string(jsonBytes)
+
+	return events.APIGatewayProxyResponse{
+		Body:       responseBody,
+		StatusCode: 200,
+		Headers: map[string]string{
+			"Content-Type": "application/json",
+		},
+	}, nil
 }
 
 func main() {
