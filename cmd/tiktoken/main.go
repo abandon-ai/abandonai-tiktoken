@@ -7,6 +7,8 @@ import (
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/pkoukk/tiktoken-go"
+	"os"
+	"strconv"
 )
 
 type MsgBody struct {
@@ -34,7 +36,14 @@ func HandleRequest(ctx context.Context, event events.APIGatewayProxyResponse) (e
 	completionCost := 0.0
 	totalCost := 0.0
 
-	baseRatio := 2.0
+	envBaseRatio := os.Getenv("BASE_RATIO")
+	if envBaseRatio == "" {
+		envBaseRatio = "1.0"
+	}
+	baseRatio, err := strconv.ParseFloat(envBaseRatio, 64)
+	if err != nil {
+		baseRatio = 1.0
+	}
 
 	switch msgBody.Model {
 	case "gpt-4-vision-preview":
