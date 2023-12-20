@@ -18,5 +18,5 @@ functions:
     handler: bin/cmd/tiktoken
     events:
       - http:
-          path: /tiktoken
+          path: /
           method: POST
