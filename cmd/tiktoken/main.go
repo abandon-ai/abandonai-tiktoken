@@ -9,6 +9,7 @@ import (
 	"github.com/pkoukk/tiktoken-go"
 	"os"
 	"strconv"
+	"sync"
 )
 
 const (
@@ -42,8 +43,8 @@ type MsgBody struct {
 
 func calculateCost(model string, promptTokens, completionTokens int) (promptCost, completionCost float64) {
 	costPerThousandTokens := map[string]struct {
-		promptMultiplier     float64
-		completionMultiplier float64
+		in  float64
+		out float64
 	}{
 		"gpt-4-vision-preview": {0.01, 0.03},
 		"gpt-4-1106-preview":   {0.01, 0.03},
@@ -55,9 +56,9 @@ func calculateCost(model string, promptTokens, completionTokens int) (promptCost
 		"gpt-3.5-turbo-1106":   {0.001, 0.002},
 	}
 
-	if multipliers, ok := costPerThousandTokens[model]; ok {
-		promptCost = float64(promptTokens) * multipliers.promptMultiplier * baseRatio / 1000
-		completionCost = float64(completionTokens) * multipliers.completionMultiplier * baseRatio / 1000
+	if _1kPrice, ok := costPerThousandTokens[model]; ok {
+		promptCost = float64(promptTokens) * _1kPrice.in * baseRatio / 1000
+		completionCost = float64(completionTokens) * _1kPrice.out * baseRatio / 1000
 	} else {
 		fmt.Println("Model not supported")
 	}
@@ -83,8 +84,27 @@ func HandleRequest(ctx context.Context, event events.APIGatewayProxyRequest) (ev
 		}, nil
 	}
 
-	promptTokens := len(tke.Encode(msgBody.Prompt, nil, nil))
-	completionTokens := len(tke.Encode(msgBody.Completion, nil, nil))
+	// Use a WaitGroup to wait for both goroutines to finish.
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	var promptTokens int
+	var completionTokens int
+
+	// Calculate promptTokens in a separate goroutine.
+	go func() {
+		defer wg.Done()
+		promptTokens = len(tke.Encode(msgBody.Prompt, nil, nil))
+	}()
+
+	// Calculate completionTokens in a separate goroutine.
+	go func() {
+		defer wg.Done()
+		completionTokens = len(tke.Encode(msgBody.Completion, nil, nil))
+	}()
+
+	// Wait for both goroutines to finish.
+	wg.Wait()
 
 	promptCost, completionCost := calculateCost(msgBody.Model, promptTokens, completionTokens)
 	totalCost := promptCost + completionCost
