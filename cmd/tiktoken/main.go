@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/aws/aws-lambda-go/events"
@@ -69,7 +68,7 @@ func calculateCost(model string, promptTokens, completionTokens int) (promptCost
 	}
 }
 
-func HandleRequest(ctx context.Context, event events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+func HandleRequest(event events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	var msgBody MsgBody
 	err := json.Unmarshal([]byte(event.Body), &msgBody)
 	if err != nil {
