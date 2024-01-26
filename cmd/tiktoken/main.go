@@ -46,6 +46,7 @@ func calculateCost(model string, promptTokens, completionTokens int) (promptCost
 		out float64
 	}{
 		"gpt-4-vision-preview": {0.01, 0.03},
+		"gpt-4-0125-preview":   {0.01, 0.03},
 		"gpt-4-1106-preview":   {0.01, 0.03},
 		"gpt-4-0314":           {0.03, 0.06},
 		"gpt-4":                {0.03, 0.06},
