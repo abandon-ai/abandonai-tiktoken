@@ -54,6 +54,7 @@ func calculateCost(model string, promptTokens, completionTokens int) (promptCost
 		"gpt-3.5-turbo":        {0.0016, 0.002},
 		"gpt-3.5-turbo-16k":    {0.003, 0.004},
 		"gpt-3.5-turbo-1106":   {0.001, 0.002},
+		"gpt-3.5-turbo-0125":   {0.0005, 0.0015},
 	}
 
 	if _1kPrice, ok := costPerThousandTokens[model]; ok {
